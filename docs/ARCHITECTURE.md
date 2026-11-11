@@ -63,7 +63,7 @@ config -> lock -> preflight -> recover interrupted run -> hold check
   -> fetch v4 -> fetch v6 -> validate v4 -> validate v6 -> render candidate
   -> compare with live --(same)--> "unchanged", retry pending reload, exit 0
   -> stage in STAGING_DIR -> candidate nginx -t (throwaway config)
-  -> state: in_progress -> backup live to STATE_DIR/previous.conf
+  -> backup live to STATE_DIR/previous.conf -> state: in_progress
   -> rename staged over live -> full nginx -t
        fail: restore backup (or delete), nginx -t again, exit 4
   -> state: pending_reload -> nginx -T include check (warning only)
@@ -142,9 +142,15 @@ the bytes once and causes one reload.
   command. On a failed first run without root, where no delete command is
   allowed, the new file is replaced by a header-only snippet that trusts
   nothing.
-- **Recovery (W14).** The state file records `in_progress` before the backup
-  and rename. The next run tests first; if the leftover snippet fails, it
+- **Recovery (W14).** The state file records `in_progress` after the backup
+  is written (by rename) and before the snippet is renamed into place. The
+  PRD puts the marker before the backup; writing the backup first means a
+  crash between the two can never make a later recovery restore an older
+  backup. The next run tests first; if the leftover snippet fails, it
   restores the backup and continues the normal run.
+- **Extra trusted addresses** skip the prefix floor and the private-space
+  checks (V11), but a default route (`0.0.0.0/0`, `::/0`) is still refused
+  with exit 1: it would let any client set its own address.
 - **Hold (RB3).** A rollback sets `hold_until`. Any update run inside the hold
   logs `held after rollback` and exits 0 without fetching; an expired hold
   warns and is cleared. `--release` clears it.

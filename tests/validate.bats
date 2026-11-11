@@ -239,6 +239,16 @@ list_with() {
 	[ "$(calls '^curl ')" -eq 0 ]
 }
 
+@test "V11: a default route is refused as an extra address" {
+	run cfrn --extra-trusted 0.0.0.0/0
+	[ "$status" -eq 1 ]
+	[[ $output == *"default route"* ]]
+	run cfrn --extra-trusted ::/0
+	[ "$status" -eq 1 ]
+	[[ $output == *"default route"* ]]
+	[ "$(calls '^curl ')" -eq 0 ]
+}
+
 @test "V11: duplicate extra addresses are removed with a warning" {
 	run cfrn --dry-run --extra-trusted 10.0.0.5/32 --extra-trusted 10.0.0.5/32
 	[ "$status" -eq 0 ]

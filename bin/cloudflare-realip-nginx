@@ -610,6 +610,11 @@ parse_extras() {
 				die "$EX_CONFIG" "extra trusted address '$(quote_line "$e")': $IP_ERR"
 			fi
 		fi
+		# Extras skip the floor and the private-space checks (V11), but a
+		# default route would let any client set its own address.
+		if [[ $IP_CANON != unix: ]] && ((IP_PREFIX == 0)); then
+			die "$EX_CONFIG" "extra trusted address '$IP_CANON' is a default route, which would trust every address"
+		fi
 		if [[ -n ${seen[$IP_CANON]+x} ]]; then
 			warn "duplicate extra trusted address $IP_CANON removed"
 			continue
@@ -1671,16 +1676,15 @@ mode_update() {
 		die "$EX_TEST" "candidate test failed: $(first_error)"
 	fi
 
-	# Step 10: back up the live snippet.
+	# Step 10: back up the live snippet, then mark the run in progress, in
+	# that order, so a recovery after a crash never restores an older backup.
 	if [[ -f $OUTPUT ]]; then
 		had_backup=1
+		save_backup
 	fi
 	STATE[in_progress]=1
 	STATE[in_progress_had_backup]=$had_backup
 	state_save
-	if [[ $had_backup == 1 ]]; then
-		save_backup
-	fi
 
 	# Step 11: atomic rename into place.
 	promote_staged

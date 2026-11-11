@@ -34,7 +34,8 @@
 
 # Extra addresses to trust, space separated, written in their own block. For
 # example a local load balancer: "10.0.0.5/32 unix:". Prefix lengths are
-# required. These skip the prefix floor and the private space checks.
+# required. These skip the prefix floor and the private space checks; a
+# default route (0.0.0.0/0 or ::/0) is still refused.
 #CFRN_EXTRA_TRUSTED=
 
 # Plausibility bounds for each fetched list.
