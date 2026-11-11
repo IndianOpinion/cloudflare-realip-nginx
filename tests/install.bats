@@ -56,6 +56,31 @@ inst() {
 	[ "$(calls 'systemctl enable')" -eq 0 ]
 }
 
+@test "I1: after a failed dry run, a second install retries it and enables the timer" {
+	serve_v4 v4-private.txt
+	run inst
+	[ "$status" -eq 1 ]
+	serve_ok
+	: >"$CALLS"
+	run inst
+	echo "$output"
+	[ "$status" -eq 0 ]
+	[[ $output != *"nothing to do"* ]]
+	[ "$(calls '^curl ')" -eq 2 ]
+	[ "$(calls 'systemctl enable --now cloudflare-realip-nginx.timer')" -eq 1 ]
+}
+
+@test "I2: a failing dry run leaves no cron file behind" {
+	serve_v4 v4-private.txt
+	run inst --cron
+	[ "$status" -eq 1 ]
+	[ ! -e "$DEST/etc/cron.d/cloudflare-realip-nginx" ]
+	serve_ok
+	run inst --cron
+	[ "$status" -eq 0 ]
+	[ -f "$DEST/etc/cron.d/cloudflare-realip-nginx" ]
+}
+
 @test "I1: --no-timer installs the units without enabling them" {
 	run inst --no-timer
 	[ "$status" -eq 0 ]
@@ -170,6 +195,17 @@ inst() {
 	[ -d "$DSTATE" ]
 	[ -f "$DCONF" ]
 	[ "$(calls 'systemctl reload\|-s reload')" -eq 0 ]
+}
+
+@test "I5: purge removes only the tool's own files from the state directory" {
+	run inst
+	echo backup >"$DSTATE/previous.conf"
+	echo theirs >"$DSTATE/unrelated"
+	run inst --uninstall --purge
+	[ "$status" -eq 0 ]
+	[ ! -e "$DSTATE/previous.conf" ]
+	[ "$(cat "$DSTATE/unrelated")" = "theirs" ]
+	[[ $output == *"kept: $DSTATE"* ]]
 }
 
 @test "install: --purge without --uninstall is refused" {

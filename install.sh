@@ -173,7 +173,7 @@ do_install() {
 		CHANGED=1
 	fi
 
-	local units_changed=0
+	local units_changed=0 cron_src= cron_dest= cron_mode=
 	if [[ $mode == systemd ]]; then
 		local before=$CHANGED
 		CHANGED=0
@@ -183,18 +183,22 @@ do_install() {
 		units_changed=$CHANGED
 		CHANGED=$((before | CHANGED))
 	elif [[ -d $DESTDIR/etc/cron.d ]]; then
+		# The cron file is what schedules the tool, so it is only put in
+		# place after the dry run below has passed.
 		if [[ -f $CRONFILE ]]; then
 			say "unchanged: $CRONFILE (keeps its random time)"
 		else
 			render "$SRC/cron/$NAME.in" >"$tmp/cron"
-			put "$tmp/cron" "$CRONFILE" 0644
+			cron_src="$tmp/cron" cron_dest=$CRONFILE cron_mode=0644
+			CHANGED=1
 		fi
 	elif [[ -d $DESTDIR/etc/periodic/daily ]]; then
 		if [[ -f $PERIODIC ]]; then
 			say "unchanged: $PERIODIC (keeps its random delay)"
 		else
 			render "$SRC/cron/periodic-daily.in" >"$tmp/periodic"
-			put "$tmp/periodic" "$PERIODIC" 0755
+			cron_src="$tmp/periodic" cron_dest=$PERIODIC cron_mode=0755
+			CHANGED=1
 		fi
 	else
 		fail "neither systemd, /etc/cron.d nor /etc/periodic/daily found; schedule '$SBINDIR/$NAME --quiet' once a day yourself"
@@ -218,7 +222,14 @@ do_install() {
 		fi
 	fi
 
-	if [[ $CHANGED == 0 ]]; then
+	# A timer that is still disabled (for example because an earlier dry run
+	# failed) is unfinished work, not "already installed".
+	local enable_pending=0
+	if [[ $mode == systemd && $USE_TIMER == 1 ]] && run_services &&
+		! systemctl is-enabled --quiet "$NAME.timer"; then
+		enable_pending=1
+	fi
+	if [[ $CHANGED == 0 && $enable_pending == 0 ]]; then
 		say "nothing to do: already installed"
 		return 0
 	fi
@@ -226,11 +237,14 @@ do_install() {
 	say "checking: $NAME --dry-run --test"
 	if ! CFRN_OUTPUT="$DESTDIR$OUTPUT" CFRN_STATE_DIR="$DESTDIR$STATE_DIR" \
 		"$TOOL" --config "$CONF" --dry-run --test --quiet >/dev/null; then
-		fail "the dry run failed, so the timer was not enabled; fix the error above and run install.sh again"
+		fail "the dry run failed, so the timer was not enabled (or the cron job not installed); fix the error above and run install.sh again"
 	fi
 	say "dry run passed"
 
 	if [[ $mode != systemd ]]; then
+		if [[ -n $cron_src ]]; then
+			put "$cron_src" "$cron_dest" "$cron_mode"
+		fi
 		say "done: scheduled by cron"
 		return 0
 	fi
@@ -242,7 +256,7 @@ do_install() {
 		say "skipped: systemctl enable --now $NAME.timer (--destdir is set)"
 		return 0
 	fi
-	if [[ $units_changed == 1 ]]; then
+	if [[ $units_changed == 1 || $enable_pending == 1 ]]; then
 		systemctl daemon-reload
 	fi
 	if ! systemctl is-enabled --quiet "$NAME.timer"; then
@@ -315,9 +329,20 @@ do_uninstall() {
 		rm -f -- "$saved"
 		say "removed: $snippet"
 	fi
-	if [[ -d $DESTDIR$STATE_DIR && $STATE_DIR != / ]]; then
-		rm -rf -- "$DESTDIR$STATE_DIR"
-		say "removed: $DESTDIR$STATE_DIR"
+	# Remove only what the tool writes, then the directory if it is empty,
+	# so a state directory pointed at a shared path never loses other files.
+	local sd="$DESTDIR$STATE_DIR" f
+	if [[ -d $sd ]]; then
+		for f in "$sd"/state "$sd"/previous.conf "$sd"/staged.conf "$sd"/lock "$sd"/.state.* "$sd"/.previous.*; do
+			if [[ -f $f ]]; then
+				rm -f -- "$f"
+			fi
+		done
+		if rmdir -- "$sd" 2>/dev/null; then
+			say "removed: $sd"
+		else
+			say "kept: $sd (it holds files this tool did not write)"
+		fi
 	fi
 	remove "$CONF"
 	remove "$CONF.new"
