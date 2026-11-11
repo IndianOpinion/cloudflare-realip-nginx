@@ -1,0 +1,44 @@
+name: Live endpoints
+
+# Once a week, fetch Cloudflare's real lists and run the candidate syntax
+# test, so a change in Cloudflare's format is seen before users see it.
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  live:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install nginx
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nginx
+      - name: Dry run with the syntax test
+        id: run
+        run: |
+          set -o pipefail
+          bin/cloudflare-realip-nginx --config /dev/null --no-syslog --dry-run --test 2>&1 | tee live.log
+      - name: Open an issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "The weekly live check failed on $(date -u +%Y-%m-%d)."
+            echo
+            echo '```'
+            tail -n 40 live.log || true
+            echo '```'
+            echo
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } > body.md
+          gh issue create --title "Live endpoint check failed" --body-file body.md --label bug || \
+            gh issue create --title "Live endpoint check failed" --body-file body.md

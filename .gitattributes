@@ -1,0 +1,10 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.bats text eol=lf
+bin/* text eol=lf
+tests/helpers/shims/* text eol=lf
+# Fixtures are byte-exact (CRLF, BOM, no trailing newline): never convert.
+tests/fixtures/** -text
+tests/golden/** -text
+/.github export-ignore
+/tests export-ignore

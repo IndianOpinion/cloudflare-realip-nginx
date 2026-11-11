@@ -6,10 +6,9 @@
 .vscode/
 
 # Test and build output
-/tmp/
 /build/
 /coverage/
-test/tmp/
+tests/tmp/
 *.log
 
 # Local overrides and secrets
