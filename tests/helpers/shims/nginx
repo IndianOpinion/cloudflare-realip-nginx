@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Test stand-in for nginx. Results come from environment variables; values
+# that hold a space separated list are used one per call.
+#   NGINX_CANDIDATE_RC / NGINX_CANDIDATE_MSG  -t with -c (candidate test)
+#   NGINX_FULL_RC / NGINX_FULL_MSG            -t without -c (full test)
+#   NGINX_DUMP / NGINX_DUMP_RC                -T
+#   NGINX_RELOAD_RC                           -s reload
+set -euo pipefail
+# shellcheck source=_seq.bash
+. "$(dirname "$0")/_seq.bash"
+printf 'nginx %s\n' "$*" >>"$SHIM_DIR/calls.log"
+args=" $* "
+if [[ $args == *" -V "* ]]; then
+	echo "nginx version: nginx/1.24.0 (test stand-in)" >&2
+	echo "configure arguments: ${NGINX_CONFIGURE_ARGS:-}" >&2
+	exit 0
+fi
+if [[ $args == *" -t "* && $args == *" -c "* ]]; then
+	rc=$(seq_next NGINX_CANDIDATE_RC 0)
+	if [[ -n ${NGINX_CANDIDATE_SLEEP:-} ]]; then
+		touch "$SHIM_DIR/candidate-started"
+		sleep "$NGINX_CANDIDATE_SLEEP"
+	fi
+	if ((rc != 0)); then
+		echo "${NGINX_CANDIDATE_MSG:-nginx: [emerg] test stand-in candidate failure}" >&2
+		echo "nginx: configuration file test failed" >&2
+	fi
+	exit "$rc"
+fi
+if [[ $args == *" -t "* ]]; then
+	rc=$(seq_next NGINX_FULL_RC 0)
+	if ((rc != 0)); then
+		echo "${NGINX_FULL_MSG:-nginx: [emerg] test stand-in full test failure}" >&2
+		echo "nginx: configuration file /etc/nginx/nginx.conf test failed" >&2
+	else
+		echo "nginx: configuration file /etc/nginx/nginx.conf test is successful" >&2
+	fi
+	exit "$rc"
+fi
+if [[ $args == *" -T "* ]]; then
+	printf '%s\n' "${NGINX_DUMP:-}"
+	exit "${NGINX_DUMP_RC:-0}"
+fi
+if [[ $args == *" -s reload "* ]]; then
+	rc=$(seq_next NGINX_RELOAD_RC 0)
+	((rc == 0)) || echo "nginx: [error] reload failed in the test stand-in" >&2
+	exit "$rc"
+fi
+exit 0
