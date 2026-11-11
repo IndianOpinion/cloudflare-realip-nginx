@@ -1875,7 +1875,11 @@ mode_status() {
 	printf 'last run:       %s (%s, exit %s)\n' "$(fmt_time "${STATE[last_run]:-}")" "${STATE[last_result]:-none}" "${STATE[last_exit]:-none}"
 	printf 'last success:   %s\n' "$(fmt_time "${STATE[last_success]:-}")"
 	printf 'ranges:         %s IPv4, %s IPv6\n' "${STATE[count_v4]:-0}" "${STATE[count_v6]:-0}"
-	printf 'pending reload: %s\n' "$([[ ${STATE[pending_reload]:-0} == 1 ]] && printf yes || printf no)"
+	local pending=no
+	if [[ ${STATE[pending_reload]:-0} == 1 ]]; then
+		pending=yes
+	fi
+	printf 'pending reload: %s\n' "$pending"
 	if [[ $hold =~ ^[0-9]+$ ]] && ((hold > NOW)); then
 		printf 'hold:           until %s (run --release to clear)\n' "$(fmt_time "$hold")"
 	else

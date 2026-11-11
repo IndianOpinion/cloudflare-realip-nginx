@@ -30,8 +30,8 @@ if [[ $kind == ufw ]]; then
 	echo "#   ufw status numbered   (and delete 'Nginx Full', '80/tcp', '443/tcp' ALLOW Anywhere)"
 else
 	echo "table inet cloudflare_web {"
-	echo "  set cf4 { type ipv4_addr; flags interval; elements = { $(echo $v4 | tr ' ' ',') } }"
-	echo "  set cf6 { type ipv6_addr; flags interval; elements = { $(echo $v6 | tr ' ' ',') } }"
+	echo "  set cf4 { type ipv4_addr; flags interval; elements = { ${v4//$'\n'/, } } }"
+	echo "  set cf6 { type ipv6_addr; flags interval; elements = { ${v6//$'\n'/, } } }"
 	echo "  chain input {"
 	echo "    type filter hook input priority -10; policy accept;"
 	echo "    tcp dport { 80, 443 } ip saddr @cf4 accept"
