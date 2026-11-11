@@ -1,0 +1,89 @@
+# cloudflare-realip-nginx settings.
+#
+# This file is read as data, never sourced or executed. One KEY=value per
+# line. Quote values that contain spaces with "double" or 'single' quotes.
+# Unknown keys are an error, so a typo stops the run instead of being
+# ignored. Environment variables with the same names override this file, and
+# command line flags override both. Every line below shows the default.
+
+# The snippet nginx includes. Absolute path, not a symlink.
+#CFRN_OUTPUT=/etc/nginx/conf.d/cloudflare-realip.conf
+
+# Backup, state file and lock.
+#CFRN_STATE_DIR=/var/lib/cloudflare-realip-nginx
+
+# Where the new snippet is written before it is renamed into place. Empty
+# means a hidden directory next to the snippet's directory, for example
+# /etc/nginx/.cloudflare-realip-nginx. It must be on the same filesystem as
+# the snippet (the tool checks) and must not be the include directory.
+#CFRN_STAGING_DIR=
+
+# The published lists. HTTPS only.
+#CFRN_URL_V4=https://www.cloudflare.com/ips-v4
+#CFRN_URL_V6=https://www.cloudflare.com/ips-v6
+
+# Only accept www.cloudflare.com for the URLs and every redirect. Setting
+# this to no is logged as a warning on every run.
+#CFRN_PIN_HOST=yes
+
+# Header that carries the visitor address: letters, digits and hyphens.
+#CFRN_HEADER=CF-Connecting-IP
+
+# Add "real_ip_recursive on" (useful with X-Forwarded-For only).
+#CFRN_RECURSIVE=no
+
+# Extra addresses to trust, space separated, written in their own block. For
+# example a local load balancer: "10.0.0.5/32 unix:". Prefix lengths are
+# required. These skip the prefix floor and the private space checks.
+#CFRN_EXTRA_TRUSTED=
+
+# Plausibility bounds for each fetched list.
+#CFRN_MIN_COUNT_V4=10
+#CFRN_MIN_COUNT_V6=3
+#CFRN_MAX_COUNT=200
+#CFRN_MIN_PREFIX_V4=8
+#CFRN_MIN_PREFIX_V6=16
+
+# Refuse a run that would remove more than this share of either family
+# unless --force is given. Additions are never limited.
+#CFRN_MAX_SHRINK_PERCENT=50
+
+# Network: seconds to connect, seconds per attempt, attempts, first retry
+# delay in seconds (doubles each time), and the largest body accepted.
+#CFRN_CONNECT_TIMEOUT=10
+#CFRN_TOTAL_TIMEOUT=30
+#CFRN_ATTEMPTS=3
+#CFRN_RETRY_DELAY=2
+#CFRN_MAX_BODY_BYTES=65536
+
+# nginx binary, the full test command (empty: "<CFRN_NGINX> -t"), the
+# configuration dump used to check the snippet is included (empty:
+# "<CFRN_NGINX> -T") and the reload command (empty: "systemctl reload
+# <CFRN_SERVICE_NAME>" under systemd, otherwise "<CFRN_NGINX> -s reload").
+#CFRN_NGINX=nginx
+#CFRN_TEST_COMMAND=
+#CFRN_DUMP_COMMAND=
+#CFRN_RELOAD_COMMAND=
+#CFRN_SERVICE_NAME=nginx
+
+# How to tell whether nginx runs: auto, systemd or none (pid file).
+#CFRN_SERVICE_MANAGER=auto
+#CFRN_PID_FILE=/run/nginx.pid
+
+# Privilege helper for non-root runs: auto means none as root and "sudo -n"
+# otherwise; "none" disables it. See examples/sudoers.
+#CFRN_PRIV_HELPER=auto
+
+# Warn when the last success is older than this many days.
+#CFRN_STALE_DAYS=14
+
+# A --rollback holds scheduled runs for this many days or until --release.
+#CFRN_HOLD_DAYS=7
+
+# Syslog output and tag.
+#CFRN_SYSLOG=yes
+#CFRN_SYSLOG_TAG=cloudflare-realip-nginx
+
+# Directory for a Prometheus textfile (node_exporter textfile collector).
+# Empty means off.
+#CFRN_METRICS_DIR=
