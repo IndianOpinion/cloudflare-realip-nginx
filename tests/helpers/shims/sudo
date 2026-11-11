@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Test stand-in for sudo. "-n -l CMD" answers SUDO_LIST_RC (or 1 when CMD
+# matches SUDO_DENY); anything else runs the command as the test user.
+set -euo pipefail
+printf 'sudo %s\n' "$*" >>"$SHIM_DIR/calls.log"
+[[ ${1:-} == -n ]] && shift
+if [[ ${1:-} == -l ]]; then
+	shift
+	if [[ -n ${SUDO_DENY:-} && "$*" == *"$SUDO_DENY"* ]]; then
+		exit 1
+	fi
+	exit "${SUDO_LIST_RC:-0}"
+fi
+exec "$@"

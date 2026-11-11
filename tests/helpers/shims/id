@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Test stand-in for id: "id -u" prints FAKE_UID when it is set.
+set -euo pipefail
+if [[ ${1:-} == -u && -n ${FAKE_UID:-} ]]; then
+	printf '%s\n' "$FAKE_UID"
+	exit 0
+fi
+PATH=/usr/bin:/bin exec id "$@"

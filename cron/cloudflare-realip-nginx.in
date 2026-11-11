@@ -1,0 +1,8 @@
+# cloudflare-realip-nginx: daily refresh of the nginx real-IP snippet.
+# install.sh picks the minute and hour at random so a fleet does not hit
+# Cloudflare at the same second. Messages go to syslog; with --quiet, cron
+# mails only warnings and errors. Do not redirect output to a file that each
+# run overwrites: a dead job would look like a healthy one.
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+@MINUTE@ @HOUR@ * * * root @SBINDIR@/cloudflare-realip-nginx --quiet

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Test stand-in for mktemp: fails when an argument contains MKTEMP_FAIL_MATCH.
+set -euo pipefail
+if [[ -n ${MKTEMP_FAIL_MATCH:-} && "$*" == *"$MKTEMP_FAIL_MATCH"* ]]; then
+	echo "mktemp: failed to create file: No space left on device" >&2
+	exit 1
+fi
+PATH=/usr/bin:/bin exec mktemp "$@"

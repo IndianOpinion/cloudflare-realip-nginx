@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily refresh of the nginx real-IP snippet from Cloudflare's ranges
+Documentation=https://github.com/IndianOpinion/cloudflare-realip-nginx
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=1h
+Persistent=true
+AccuracySec=1m
+
+[Install]
+WantedBy=timers.target

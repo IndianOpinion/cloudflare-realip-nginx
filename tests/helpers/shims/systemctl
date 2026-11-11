@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Test stand-in for systemctl.
+#   SYSTEMCTL_ACTIVE_RC (is-active), SYSTEMCTL_RELOAD_RC (reload, a list),
+#   SYSTEMCTL_ENABLED_RC (is-enabled). Everything else succeeds.
+set -euo pipefail
+# shellcheck source=_seq.bash
+. "$(dirname "$0")/_seq.bash"
+printf 'systemctl %s\n' "$*" >>"$SHIM_DIR/calls.log"
+case ${1:-} in
+is-active) exit "${SYSTEMCTL_ACTIVE_RC:-0}" ;;
+is-enabled) exit "${SYSTEMCTL_ENABLED_RC:-1}" ;;
+reload)
+	rc=$(seq_next SYSTEMCTL_RELOAD_RC 0)
+	((rc == 0)) || echo "Job for nginx.service failed (test stand-in)." >&2
+	exit "$rc"
+	;;
+esac
+exit 0

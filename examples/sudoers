@@ -1,0 +1,19 @@
+# Sudoers rules for running cloudflare-realip-nginx as an unprivileged user
+# (here "cfrealip"). Install with:
+#
+#   visudo -f /etc/sudoers.d/cloudflare-realip-nginx
+#
+# The tool asks the helper for exactly these four commands with these exact
+# arguments. There are no wildcards. Check the paths on your system with
+# "command -v nginx systemctl install" and adjust them, and adjust the two
+# file paths if you changed CFRN_STATE_DIR or CFRN_OUTPUT.
+#
+# The user also needs: write access to /var/lib/cloudflare-realip-nginx (the
+# state directory, which holds staged.conf), and read access to the snippet.
+
+Cmnd_Alias CFREALIP = /usr/sbin/nginx -t, \
+                      /usr/sbin/nginx -T, \
+                      /usr/bin/systemctl reload nginx, \
+                      /usr/bin/install -m 0644 /var/lib/cloudflare-realip-nginx/staged.conf /etc/nginx/conf.d/cloudflare-realip.conf
+
+cfrealip ALL=(root) NOPASSWD: CFREALIP

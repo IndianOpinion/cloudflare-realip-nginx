@@ -1,0 +1,36 @@
+# Installed by install.sh, which fills in the @...@ paths.
+[Unit]
+Description=Refresh the nginx real-IP snippet from Cloudflare's published ranges
+Documentation=https://github.com/IndianOpinion/cloudflare-realip-nginx
+Wants=network-online.target
+After=network-online.target nginx.service
+
+[Service]
+Type=oneshot
+ExecStart=@SBINDIR@/cloudflare-realip-nginx
+# Messages go to syslog (journalctl -t cloudflare-realip-nginx). Warnings and
+# errors also appear on stderr.
+StandardOutput=null
+StandardError=journal
+UMask=0022
+
+# Sandbox. The tool may write only the snippet directory, its staging and
+# state directories, and what "nginx -t" needs.
+ProtectSystem=strict
+ReadWritePaths=@OUTPUT_DIR@ @STAGING_DIR@ @STATE_DIR@
+ReadWritePaths=-/var/log/nginx -/var/lib/nginx -/var/cache/nginx -/run/nginx
+PrivateTmp=yes
+ProtectHome=read-only
+NoNewPrivileges=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+SystemCallArchitectures=native

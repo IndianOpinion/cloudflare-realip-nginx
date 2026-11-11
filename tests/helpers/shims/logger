@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Test stand-in for logger: records the call.
+printf 'logger %s\n' "$*" >>"$SHIM_DIR/calls.log"

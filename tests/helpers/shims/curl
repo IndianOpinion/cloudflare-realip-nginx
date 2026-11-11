@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Test stand-in for curl. Serves fixtures according to $SHIM_DIR/curl.spec:
+#   URL STATUS CONTENT-TYPE FIXTURE CURL-EXIT [REDIRECT-URL]
+# "-" means empty; a FIXTURE starting with "/" is an absolute path. Repeated lines for one URL are served in order (retries).
+set -euo pipefail
+out= url= maxsize=
+while (($# > 0)); do
+	case $1 in
+	--output) out=$2; shift ;;
+	--max-filesize) maxsize=$2; shift ;;
+	--) url=$2; shift ;;
+	esac
+	shift
+done
+printf 'curl %s\n' "$url" >>"$SHIM_DIR/calls.log"
+printf 'curl-env https_proxy=%s no_proxy=%s\n' "${https_proxy:-}" "${no_proxy:-}" >>"$SHIM_DIR/calls.log"
+key=$(printf '%s' "$url" | cksum | cut -d ' ' -f 1)
+n=$(cat "$SHIM_DIR/curl.$key" 2>/dev/null || echo 0)
+n=$((n + 1))
+echo "$n" >"$SHIM_DIR/curl.$key"
+mapfile -t lines < <(awk -v u="$url" '$1 == u' "$SHIM_DIR/curl.spec")
+if ((${#lines[@]} == 0)); then
+	echo "curl: (6) Could not resolve host" >&2
+	printf '000\n\n\n'
+	exit 6
+fi
+idx=$((n <= ${#lines[@]} ? n - 1 : ${#lines[@]} - 1))
+read -r _ status ctype fixture rc redirect <<<"${lines[idx]}"
+[[ $ctype == - ]] && ctype=
+: >"$out"
+if [[ $fixture == /* ]]; then
+	cp "$fixture" "$out"
+elif [[ $fixture != - ]]; then
+	cp "$FIXTURES/$fixture" "$out"
+fi
+if [[ -n $maxsize && -z ${CURL_IGNORE_MAXSIZE:-} ]] && (($(wc -c <"$out") > maxsize)); then
+	echo "curl: (63) Maximum file size exceeded" >&2
+	printf '200\n%s\n\n' "$ctype"
+	exit 63
+fi
+if ((rc != 0)); then
+	echo "curl: ($rc) simulated failure" >&2
+	printf '000\n\n\n'
+	exit "$rc"
+fi
+printf '%s\n%s\n%s\n' "$status" "$ctype" "${redirect:-}"

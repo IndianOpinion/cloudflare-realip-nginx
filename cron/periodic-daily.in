@@ -1,0 +1,5 @@
+#!/bin/sh
+# cloudflare-realip-nginx for busybox crond (Alpine): run-parts starts this
+# from /etc/periodic/daily. The sleep spreads a fleet over an hour.
+sleep @DELAY@
+exec @SBINDIR@/cloudflare-realip-nginx --quiet
