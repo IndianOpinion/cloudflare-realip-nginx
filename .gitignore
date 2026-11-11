@@ -1,0 +1,17 @@
+# Editors and OS
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
+
+# Test and build output
+/tmp/
+/build/
+/coverage/
+test/tmp/
+*.log
+
+# Local overrides and secrets
+*.local
+.env
