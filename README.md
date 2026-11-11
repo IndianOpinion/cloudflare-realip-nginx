@@ -18,6 +18,7 @@ This project came out of the work on indianopinion.org and is written from scrat
 - [Rollback](#rollback)
 - [Limitations](#limitations)
 - [FAQ](#faq)
+- [Contributing](#contributing)
 - [Licence](#licence)
 
 ## Lock the origin to Cloudflare
@@ -30,7 +31,7 @@ Read this before anything else.
 4. Traps:
    - Closing port 80 to the world breaks HTTP-01 certificate renewal (for example certbot's default) silently, months later, when the certificate expires. Switch to DNS-01 or a Cloudflare origin certificate first.
    - Closing IPv4 while leaving IPv6 open leaves the origin exposed. Do both families.
-5. Cloudflare's ranges are shared by every Cloudflare customer. An allowlist stops the open internet, but not traffic sent through someone else's Cloudflare account. For that, use [Authenticated Origin Pulls](https://developers.cloudflare.com/ssl/origin-configuration/authenticated-origin-pull/) (mutual TLS) or [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/). This tool configures neither.
+5. Cloudflare's ranges are shared by every Cloudflare customer. An allowlist stops the open internet, but not traffic sent through someone else's Cloudflare account. For that, use [Authenticated Origin Pulls](https://developers.cloudflare.com/ssl/origin-configuration/authenticated-origin-pull/) (mutual TLS: nginx sets `ssl_verify_client on` and trusts the client certificate's CA) or [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/). With zone-level Authenticated Origin Pulls and Cloudflare's shared certificate, nginx only learns that the request came through Cloudflare, not through your account; upload your own client certificate (per-zone or per-hostname) to close that gap. This tool configures none of this.
 6. If Pseudo IPv4 is set to "Overwrite Headers" in Cloudflare, IPv6 visitors arrive with a pseudo address from `240.0.0.0/4` ([Cloudflare docs](https://developers.cloudflare.com/support/troubleshooting/restoring-visitor-ips/restoring-original-visitor-ips/)).
 
 **ufw** (Ubuntu, Debian):
@@ -127,7 +128,7 @@ Settings come from `/etc/default/cloudflare-realip-nginx` (plain `KEY=value`, pa
 | `CFRN_PIN_HOST` | `yes` | URLs and redirects must be on `www.cloudflare.com`; `no` warns every run |
 | `CFRN_HEADER` / `--header` | `CF-Connecting-IP` | Letters, digits and hyphens only |
 | `CFRN_RECURSIVE` / `--recursive` | `no` | Adds `real_ip_recursive on` |
-| `CFRN_EXTRA_TRUSTED` / `--extra-trusted` | none | Space separated CIDRs or `unix:`, own block |
+| `CFRN_EXTRA_TRUSTED` / `--extra-trusted` | none | Space separated CIDRs or `unix:`, own block; private space allowed, a default route is not |
 | `CFRN_MIN_COUNT_V4` / `_V6` | `10` / `3` | Fewer ranges fails the run |
 | `CFRN_MAX_COUNT` | `200` | Per family |
 | `CFRN_MIN_PREFIX_V4` / `_V6` | `8` / `16` | Wider prefixes are refused |
@@ -148,6 +149,8 @@ Settings come from `/etc/default/cloudflare-realip-nginx` (plain `KEY=value`, pa
 | `CFRN_SYSLOG` / `--no-syslog` | `yes` | |
 | `CFRN_SYSLOG_TAG` | `cloudflare-realip-nginx` | |
 | `CFRN_METRICS_DIR` | empty (off) | Writes `cloudflare_realip_nginx.prom` for node_exporter's textfile collector |
+
+The systemd unit grants write access to the output, staging and state directories by path. If you change `CFRN_OUTPUT`, `CFRN_STAGING_DIR` or `CFRN_STATE_DIR`, run `install.sh` again so the unit follows.
 
 Other flags: `--force` (allow a large shrink, or replace a snippet this tool did not write), `--quiet` (print only warnings and errors), `--config FILE`.
 
@@ -224,6 +227,8 @@ Set up a user (here `cfrealip`) that owns `/var/lib/cloudflare-realip-nginx`, in
 
 The full `nginx -t` is never run without the helper, because it usually fails as non-root: TLS private keys and log files are root-only. If sudo would ask for a password, or does not allow one of the four commands, the run stops at preflight with exit 1 and names the command.
 
+Treat that user as trusted with root: it writes the content of a file that nginx's root master process loads, and nginx configuration can, for example, open log files anywhere. The sudoers rules keep mistakes and typos narrow; they are not a sandbox.
+
 Two differences from a root run: the final copy uses `install`, which is not an atomic rename, and on a failed first run the new file cannot be deleted, so it is replaced by a header-only snippet that trusts nothing (nginx treats it like no file).
 
 The shipped systemd unit runs as root with a sandbox: `ProtectSystem=strict`, write access only to the snippet directory, the staging and state directories and the nginx log and cache directories.
@@ -262,6 +267,10 @@ A rollback holds scheduled runs (they log `held after rollback` and exit 0 witho
 **The run says the snippet is not included.** nginx does not read it yet. Add `include /etc/nginx/conf.d/cloudflare-realip.conf;` once inside `http { }`.
 
 **Can I run it in a monitoring check?** `--diff` exits 10 when Cloudflare's list changed but the snippet has not, and `--verify` exits 0 only when everything is right.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). The CI workflows are parked in `ci-pending/` until an account with the GitHub `workflow` scope moves them: `git mv ci-pending/*.yml .github/workflows/`, then delete `ci-pending/`.
 
 ## Licence
 

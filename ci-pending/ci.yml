@@ -55,7 +55,7 @@ jobs:
             DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
               bash curl ca-certificates git nginx util-linux diffutils procps bsdutils
           elif command -v dnf >/dev/null; then
-            dnf install -y bash curl git nginx util-linux diffutils procps-ng which
+            dnf install -y --allowerasing bash curl git nginx util-linux diffutils procps-ng which
           else
             apk add --no-cache bash curl git nginx flock diffutils coreutils
           fi
